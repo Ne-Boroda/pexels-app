@@ -8,12 +8,16 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 
-object RetrofitClient {
+@Singleton
+class RetrofitClient @Inject constructor() {
 
-    private const val BASE_URL = "https://api.pexels.com/v1/"
+    companion object {
+        private const val BASE_URL = "https://api.pexels.com/v1/"
+    }
 
-    // Retrofit экземпляр
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
@@ -22,7 +26,9 @@ object RetrofitClient {
             .build()
     }
 
-    // OkHttpClient
+    val pexelsApi: PexelsApi
+        get() = retrofit.create(PexelsApi::class.java)
+
     private fun createOkHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -33,12 +39,10 @@ object RetrofitClient {
             .build()
     }
 
-    // Интерцептор для добавления API ключа
     private fun createAuthInterceptor(): Interceptor {
         return Interceptor { chain ->
             val originalRequest = chain.request()
 
-            // Добавляем заголовок Authorization
             val requestWithAuth = originalRequest.newBuilder()
                 .header("Authorization", getApiKey())
                 .build()
@@ -47,7 +51,6 @@ object RetrofitClient {
         }
     }
 
-    // Интерцептор для логирования запросов
     private fun createLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
             level = if (BuildConfig.DEBUG) {
@@ -64,9 +67,5 @@ object RetrofitClient {
             throw IllegalStateException("PEXELS_API_KEY is empty. Check local.properties")
         }
         return apiKey
-    }
-
-    val pexelsApi: PexelsApi by lazy {
-        retrofit.create(PexelsApi::class.java)
     }
 }

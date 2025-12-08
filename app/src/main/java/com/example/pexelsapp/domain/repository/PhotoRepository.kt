@@ -40,5 +40,5 @@ interface PhotoRepository {
     // Статус сети
     val isOnline: Flow<Boolean>
 
-    fun updateNetworkStatus(isConnected: Boolean)
+    suspend fun updateNetworkStatus(isConnected: Boolean)
 }
