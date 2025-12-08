@@ -3,9 +3,7 @@ package com.example.pexelsapp.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pexelsapp.domain.model.Photo
-import com.example.pexelsapp.domain.model.UiState
-import com.example.pexelsapp.domain.usecase.GetCuratedPhotosUseCase
-import com.example.pexelsapp.ui.screens.home.HomeUiState
+import com.example.pexelsapp.domain.repository.PhotoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,33 +13,73 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val getCuratedPhotosUseCase: GetCuratedPhotosUseCase
-): ViewModel() {
+    private val repository: PhotoRepository
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<HomeUiState>(UiState.Loading)
+    private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
+    private val _featuredCollections = MutableStateFlow(listOf(
+        "Nature", "City", "Travel", "Animals", "Food", "People", "Art"
+    ))
+    val featuredCollections: StateFlow<List<String>> = _featuredCollections.asStateFlow()
+
+    private var currentPage = 1
+    private var currentQuery = ""
+
     init {
-        loadPhotos()
+        loadCuratedPhotos()
     }
 
-    fun loadPhotos() {
+    fun loadCuratedPhotos() {
         viewModelScope.launch {
-            _uiState.value = UiState.Loading
+            _uiState.value = _uiState.value.copy(isLoading = true)
             try {
-                val photos = getCuratedPhotosUseCase()
-                _uiState.value = if (photos.isEmpty()) {
-                    UiState.Empty
-                } else {
-                    UiState.Success(photos)
-                }
+                val photos = repository.getCuratedPhotos(page = currentPage, perPage = 30)
+                _uiState.value = HomeUiState(photos = photos)
             } catch (e: Exception) {
-                _uiState.value = UiState.Error(e.message ?: "Unknown error")
+                _uiState.value = HomeUiState(error = e.message)
             }
         }
+    }
 
-        fun refresh() {
-            loadPhotos()
+    fun searchPhotos(query: String) {
+        currentQuery = query
+        currentPage = 1
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            try {
+                val photos = repository.searchPhotos(query, page = 1, perPage = 30)
+                _uiState.value = HomeUiState(photos = photos)
+            } catch (e: Exception) {
+                _uiState.value = HomeUiState(error = e.message)
+            }
+        }
+    }
+
+    fun loadMore() {
+        currentPage++
+
+        viewModelScope.launch {
+            val newPhotos = if (currentQuery.isEmpty()) {
+                repository.getCuratedPhotos(page = currentPage, perPage = 30)
+            } else {
+                repository.searchPhotos(currentQuery, page = currentPage, perPage = 30)
+            }
+
+            _uiState.value = _uiState.value.copy(
+                photos = _uiState.value.photos + newPhotos
+            )
         }
     }
 }
+
+data class HomeUiState(
+    val photos: List<Photo> = emptyList(),
+    val searchQuery: String = "",
+    val isLoading: Boolean = false,
+    val isEmpty: Boolean = false,
+    val error: String? = null,
+    val isNetworkError: Boolean = false
+)

@@ -4,8 +4,7 @@ import java.io.FileInputStream
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.kapt)
+    alias(libs.plugins.ksp)
     alias(libs.plugins.hilt.android)
 }
 
@@ -44,17 +43,19 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         buildConfig = true
         compose = true
     }
-
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }
     packaging {
         resources {
             excludes += "/META-INF/gradle/incremental.annotation.processors"
@@ -83,7 +84,7 @@ dependencies {
     // Room
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
 
     // Retrofit
     implementation(libs.retrofit)
@@ -101,11 +102,10 @@ dependencies {
 
     // Hilt
     implementation(libs.dagger.hilt.android)
-    implementation(libs.dagger.hilt.compiler)
+    ksp(libs.dagger.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
     testImplementation(libs.junit)
-    debugImplementation(libs.androidx.ui.tooling)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
 }

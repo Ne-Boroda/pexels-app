@@ -1,4 +1,3 @@
-// di/AppModule.kt
 package com.example.pexelsapp.di
 
 import android.content.Context
